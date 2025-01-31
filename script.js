@@ -22,14 +22,16 @@ function getQuestion() {
 
     //text to speech
     const speakQuestion = new SpeechSynthesisUtterance(question);
+    speakQuestion.lang = "en-US";
     speakQuestion.onend = function () {
         let index = 0;
         function speakNextAnswer() {
             if (index < allAnswers.length) {
               const speakAnswer = new SpeechSynthesisUtterance(allAnswers[index]);
+              speakAnswer.lang = "en-US";
               speakAnswer.onend = function () {
-                index++; // Move to the next answer
-                speakNextAnswer(); // Speak the next one
+                index++; 
+                speakNextAnswer();
               };
               window.speechSynthesis.speak(speakAnswer);
             }
@@ -42,8 +44,10 @@ function getQuestion() {
         <h4 class="px-2 py-3 mb-5 border-bottom border-warning border-2 text-warning">${question}</h4>
         <div id="answer-buttons">
         ${allAnswers
-          .map((answer) => `<button class="btn btn-outline-warning btn-lg w-75 my-2">${answer}</button><br>`)
+          .map((answer) => `<button id="anwser-button" class="btn btn-outline-warning btn-lg w-75 my-2">${answer}</button><br>`)
           .join("")}
+          </div>
+          <div>
            <button id="get-spoken-answer" class="btn btn-outline-warning  btn-lg rounded-circle p-1 mb-3" data-bs-toggle="tooltip" data-bas-placement="top" title="Click to give answer by speech"><i class="bi bi-mic"></i></button>
         </div>
         <div id="feedback" class="p-2 m-2 fs-3"></div>
@@ -61,22 +65,28 @@ function getQuestion() {
   xhr.send();
 }
 function startSpeechRecognition(correctAnswer){
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang= 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.start();
-    recognition.onresult = function(event){
-        const userAnswer = event.results[0][0].transcript;
-        checkCorrectAnswer(userAnswer, correctAnswer);
-    };
-    recognition.onerror = function(event) {
-        console.log("Speech recognition error", event.error);
+    if ('webkitSpeechRecognition' in window)
+    {
+        const recognition = new webkitSpeechRecognition() || new SpeechRecognition();
+        recognition.continuous = false; //stop afer one sentence
+        recognition.interimResults = false; // Only final results
+        recognition.start();
+        recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("You said: ", transcript);
+        checkCorrectAnswer(transcript, correctAnswer);
+        };
+        recognition.onerror = function(event){
+            console.log("Speech recognition error", event.error);
+        }
+        
+    }else {
+        console.log("Speech recognition not supported in this browser.");
     }
 }
 function checkCorrectAnswer(selectedAnswer, correctAnswer){
     let feedback = document.getElementById("feedback");
-    if(selectedAnswer === correctAnswer){
+    if(selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()){
         score++;
         feedback.textContent = "Answer correct !";
         feedback.classList.add("text-success");
@@ -111,6 +121,6 @@ function startGame(){
     quizContainer.innerHTML=`
     <h1 class="text-decoration-underline mb-5 pb-5">Movie quiz game</h1>
     <button id="start-game" class="btn btn-outline-success btn-lg px-4 py-2 mt-5">Start Game</button>`
-    document.getElementById("start-game").addEventListener("click",()=>(getQuestion()));
+    document.getElementById("start-game").addEventListener("click",()=> getQuestion());
 }
 startGame();
